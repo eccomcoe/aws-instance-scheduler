@@ -1,0 +1,71 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  BucketPrefix:
+    Type: String
+    Description: The prefix for the S3 bucket names
+  OrgId:
+    Type: String
+    Description: The organization ID for the access policy
+Conditions:
+  IsMainRegion: !Equals [!Ref AWS::Region, cn-north-1]
+Resources:
+  Bucket1:
+    Type: AWS::S3::Bucket
+    Condition: IsMainRegion # Only create in main region
+    Properties:
+      BucketName: !Sub "${BucketPrefix}"
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  BucketPolicy1:
+    Type: AWS::S3::BucketPolicy
+    Condition: IsMainRegion # Only create in main region
+    Properties:
+      Bucket: !Ref Bucket1
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowOrganizationGetObjects"
+            Effect: "Allow"
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws-cn:s3:::${BucketPrefix}/*"
+            Condition:
+              StringEquals:
+                aws:PrincipalOrgID: !Ref OrgId
+  Bucket2:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub "${BucketPrefix}-${AWS::Region}"
+      AccessControl: Private
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+  BucketPolicy2:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref Bucket2
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Sid: "AllowOrganizationGetObjects"
+            Effect: "Allow"
+            Principal: "*"
+            Action: "s3:GetObject"
+            Resource: !Sub "arn:aws-cn:s3:::${BucketPrefix}-${AWS::Region}/*"
+            Condition:
+              StringEquals:
+                aws:PrincipalOrgID: !Ref OrgId
